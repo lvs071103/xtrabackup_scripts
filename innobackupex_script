@@ -26,6 +26,7 @@ CONF_FILE='/etc/my.cnf'
 SOCK_FILE='/data/db/mysql/var/mysql.sock'
 BASE_DIR=${BAK_PATH}/${BAK_DAY}
 Yesterday=$(perl -e 'use POSIX;print strftime "%Y%m%d",localtime time-86400;')
+DATA_DIR='/data/db/mysql/var'
 
 
 if [ "$UID" -ne 0 ];then
@@ -182,26 +183,43 @@ do_packaging_backup(){
     --stream=tar ./ | gzip -> ${BAK_PATH}/${BAK_DAY}_all.tar.gz
 }
 
+do_recovery(){
+    service mysqld start
+    dir_name=$(cat ./list.lock | awk 'NR==1{print}')
+    innobackupex \
+    --copy-back \
+    ${BAK_PATH}/${Yesterday}/${dir_name}
+    if [ $? -eq 0 ];then
+        chown -R mysql.mysql ${DATA_DIR}
+        service mysqld start
+    else
+        exit 1
+    fi
+}
+
 case $1 in
-	full)
-	do_full_backup
-	;;
-	inc)
-	do_inc_backup
-	;;
-	install)
-	do_install_repo
-	;;
-	merge)
-	do_merge_backup
-	;;
-	list)
-	do_write_list
-	;;
-	packaging)
-	do_packaging_backup
-	;;
-	*)
-	echo "Usage: $0 <params: [full, incremental, zip]>"
-	;;
+    full)
+    do_full_backup
+    ;;
+    inc)
+    do_inc_backup
+    ;;
+    install)
+    do_install_repo
+    ;;
+    merge)
+    do_merge_backup
+    ;;
+    list)
+    do_write_list
+    ;;
+    packaging)
+    do_packaging_backup
+    ;;
+    recovery)
+    do_recovery
+    ;;
+    *)
+    echo "Usage: $0 <params: [full, incremental, zip]>"
+    ;;
 esac
