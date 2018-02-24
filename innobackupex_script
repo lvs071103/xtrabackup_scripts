@@ -26,7 +26,7 @@ CONF_FILE='/etc/my.cnf'
 SOCK_FILE='/data/db/mysql/var/mysql.sock'
 DATA_DIR='/data/db/mysql/var'
 BASE_DIR=${BAK_PATH}/${BAK_DAY}
-# Yesterday=$(perl -e 'use POSIX;print strftime "%Y%m%d",localtime time-86400;')
+SCRIPT_DIR='/root/scripts'
 
 
 if [ "$UID" -ne 0 ];then
@@ -73,16 +73,16 @@ do_full_backup() {
 }
 
 do_write_file(){
-    if [ ! -d ./${BAK_DAY} ];then
-        mkdir -p ./${BAK_DAY}
+    if [ ! -d ${SCRIPT_DIR}/${BAK_DAY} ];then
+        mkdir -p ${SCRIPT_DIR}/${BAK_DAY}
     fi
 
-    ls -rt1 ${BASE_DIR} | tail -n 1 > ./${BAK_DAY}/back.lock
+    ls -rt1 ${BASE_DIR} | tail -n 1 > ${SCRIPT_DIR}/${BAK_DAY}/back.lock
 }
 
 
 do_read_file() {
-    echo $(cat ./${BAK_DAY}/back.lock)
+    echo $(cat ${SCRIPT_DIR}/${BAK_DAY}/back.lock)
 }
 
 do_inc_backup(){
@@ -118,7 +118,7 @@ do_inc_backup(){
 
 do_write_list(){
     if [ -d ${BAK_PATH}/$1 ]; then
-        ls -tr1  ${BAK_PATH}/$1 > ./list.lock
+        ls -tr1  ${BAK_PATH}/$1 > ${SCRIPT_DIR}/list.lock
     else
         exit 1
     fi
@@ -129,7 +129,7 @@ do_merge_backup(){
     recovery_date=$2
     end_line_number=$(grep -n "$recovery_time" list.lock | awk -F':' '{print $1}')
     echo ${end_line_number}
-    if [ -f ./list.lock ];then
+    if [ -f ${SCRIPT_DIR}/list.lock ];then
         for ((counter=1; counter<=${end_line_number}; ++counter))
         do
             dir_name=$(cat ./list.lock | awk 'NR=="'${counter}'"{print}')
@@ -188,12 +188,12 @@ do_recovery(){
     recovery_time=$REPLY
     recovery_date=$(echo ${recovery_time} | awk -F '[-," "]' '{print $1$2$3}')
     recovery_datetime=$(echo ${recovery_time} | awk '{gsub(" ","_"); print $1$2}')
-    echo ${recovery_date}
-    echo ${recovery_datetime}
+    # echo ${recovery_date}
+    # echo ${recovery_datetime}
     do_write_list ${recovery_date}
     do_merge_backup ${recovery_datetime} ${recovery_date}
     service mysqld stop
-    dir_name=$(cat ./list.lock | awk 'NR==1{print}')
+    dir_name=$(cat ${SCRIPT_DIR}/list.lock | awk 'NR==1{print}')
     innobackupex \
     --copy-back \
     ${BAK_PATH}/${recovery_date}/${dir_name}
@@ -228,7 +228,14 @@ case $1 in
 	do_recovery
 	;;
 	*)
-	echo "Usage: $0 <params: [full, inc, recovery]>"
+	echo "Usage: $0 <params: [full, incremental, zip]>"
+    echo
+    echo "参数: full, inc, recovery, packaging"
+    echo "full: 全量备份"
+    echo "inc: 增量备份"
+	echo "recovery: 恢复备份"
+    echo "packaging: 打包备份"
+    echo
 	;;
 esac
 
