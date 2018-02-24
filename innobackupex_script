@@ -17,21 +17,21 @@
 
 
 BAK_PATH=/data/database_backup
-BAK_DAY=$(date +%Y%m%d)
-LOG_FILE="mysql_back_info_${BAK_DAY}.log"
+CURRENT_DAY=$(date +%Y%m%d)
+LOG_FILE="mysql_back_info_${CURRENT_DAY}.log"
 LOG_DIR='/var/log/mysql_back'
 USER='bkpuser'
 PASS='OLidp2L5fOW2I1sm'
 CONF_FILE='/etc/my.cnf'
 SOCK_FILE='/data/db/mysql/var/mysql.sock'
 DATA_DIR='/data/db/mysql/var'
-BASE_DIR=${BAK_PATH}/${BAK_DAY}
+BASE_DIR=${BAK_PATH}/${CURRENT_DAY}
 SCRIPT_DIR='/root/scripts'
 
 
 if [ "$UID" -ne 0 ];then
-	echo "You must run as root"
-	exit
+    echo "You must run as root"
+    exit
 fi
 
 if [ ! -d ${LOG_DIR} ];then
@@ -44,7 +44,7 @@ if [ ! -d ${BASE_DIR} ];then
     mkdir -p ${BASE_DIR}
 fi
 
-do_install_repo(){
+do_install(){
     yum install http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm -y
     yum install percona-xtrabackup-24 -y
 }
@@ -73,16 +73,16 @@ do_full_backup() {
 }
 
 do_write_file(){
-    if [ ! -d ${SCRIPT_DIR}/${BAK_DAY} ];then
-        mkdir -p ${SCRIPT_DIR}/${BAK_DAY}
+    if [ ! -d ${SCRIPT_DIR}/${CURRENT_DAY} ];then
+        mkdir -p ${SCRIPT_DIR}/${CURRENT_DAY}
     fi
 
-    ls -rt1 ${BASE_DIR} | tail -n 1 > ${SCRIPT_DIR}/${BAK_DAY}/back.lock
+    ls -rt1 ${BASE_DIR} | tail -n 1 > ${SCRIPT_DIR}/${CURRENT_DAY}/back.lock
 }
 
 
 do_read_file() {
-    echo $(cat ${SCRIPT_DIR}/${BAK_DAY}/back.lock)
+    echo $(cat ${SCRIPT_DIR}/${CURRENT_DAY}/back.lock)
 }
 
 do_inc_backup(){
@@ -128,47 +128,50 @@ do_merge_backup(){
     recovery_time=$1
     recovery_date=$2
     end_line_number=$(grep -n "$recovery_time" list.lock | awk -F':' '{print $1}')
-    echo ${end_line_number}
+    # echo ${end_line_number}
     if [ -f ${SCRIPT_DIR}/list.lock ];then
         for ((counter=1; counter<=${end_line_number}; ++counter))
         do
             dir_name=$(cat ./list.lock | awk 'NR=="'${counter}'"{print}')
             if [ ${counter} -eq 1 ];then
+            # 取回全量备份
                 innobackupex \
                 --decompress \
                 --parallel=4 \
-                ${BAK_PATH}/${recovery_date}/${dir_name}
+                ${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DAY}.log 2>&1
                 find  ${BAK_PATH}/${recovery_date}/${dir_name} -name "*.qp" -delete
                 innobackupex \
                 --apply-log \
                 --redo-only \
                 --use-memory=4G \
-                ${BAK_PATH}/${recovery_date}/${dir_name}
+                ${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DAY}.log 2>&1
+                # 定义全量备份目录变量
                 full_backup_dir=${BAK_PATH}/${recovery_date}/${dir_name}
-                echo ${full_backup_dir}
             elif [ ${counter} -eq ${end_line_number} ];then
+            # 合并指定的最后一条记录，则不需要--redo-only参数
                 innobackupex \
                 --decompress \
                 --parallel=4 \
-                ${BAK_PATH}/${recovery_date}/${dir_name}
+                ${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DAY}.log 2>&1
                 find ${BAK_PATH}/${recovery_date}/${dir_name} -name "*.qp" -delete
                 innobackupex \
                 --apply-log \
                 --use-memory=4G \
                 ${full_backup_dir} \
-                --incremental-dir=${BAK_PATH}/${recovery_date}/${dir_name}
+                --incremental-dir=${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DAY}.log 2>&1
             else
+            # 合并非第一条全量备份和非最后一次的增量备份
                 innobackupex \
                 --decompress \
                 --parallel=4 \
-                ${BAK_PATH}/${recovery_date}/${dir_name}
+                ${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DAY}.log 2>&1
                 find ${BAK_PATH}/${recovery_date}/${dir_name} -name "*.qp" -delete
                 innobackupex \
                 --apply-log \
                 --use-memory=4G \
                 --redo-only \
                 ${full_backup_dir} \
-                --incremental-dir=${BAK_PATH}/${recovery_date}/${dir_name}
+                --incremental-dir=${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DAY}.log 2>&1
             fi
         done
     fi
@@ -180,7 +183,7 @@ do_packaging_backup(){
     --user=${USER} \
     --password=${PASS} \
     -S ${SOCK_FILE} \
-    --stream=tar ./ | gzip -> ${BAK_PATH}/${BAK_DAY}_all.tar.gz
+    --stream=tar ./ | gzip -> ${BAK_PATH}/${CURRENT_DAY}_all.tar.gz
 }
 
 do_recovery(){
@@ -188,8 +191,6 @@ do_recovery(){
     recovery_time=$REPLY
     recovery_date=$(echo ${recovery_time} | awk -F '[-," "]' '{print $1$2$3}')
     recovery_datetime=$(echo ${recovery_time} | awk '{gsub(" ","_"); print $1$2}')
-    # echo ${recovery_date}
-    # echo ${recovery_datetime}
     do_write_list ${recovery_date}
     do_merge_backup ${recovery_datetime} ${recovery_date}
     service mysqld stop
@@ -213,14 +214,8 @@ case $1 in
     do_inc_backup
     ;;
     install)
-    do_install_repo
+    do_install
     ;;
-    # merge)
-    # do_merge_backup
-    # ;;
-    # list)
-    # do_write_list
-    # ;;
     packaging)
     do_packaging_backup
     ;;
@@ -237,4 +232,3 @@ case $1 in
     echo
     ;;
 esac
-
