@@ -206,36 +206,36 @@ do_recovery(){
 }
 
 case $1 in
-	full)
-	do_full_backup
-	;;
-	inc)
-	do_inc_backup
-	;;
-	install)
-	do_install_repo
-	;;
-	# merge)
-	# do_merge_backup
-	# ;;
-	# list)
-	# do_write_list
-	# ;;
-	packaging)
-	do_packaging_backup
-	;;
-	recovery)
-	do_recovery
-	;;
-	*)
-	echo "Usage: $0 <params: [full, incremental, zip]>"
+    full)
+    do_full_backup
+    ;;
+    inc)
+    do_inc_backup
+    ;;
+    install)
+    do_install_repo
+    ;;
+    # merge)
+    # do_merge_backup
+    # ;;
+    # list)
+    # do_write_list
+    # ;;
+    packaging)
+    do_packaging_backup
+    ;;
+    recovery)
+    do_recovery
+    ;;
+    *)
+    echo "Usage: $0 <params: [full, incremental, zip]>"
     echo
     echo "参数: full, inc, recovery, packaging"
     echo "full: 全量备份"
     echo "inc: 增量备份"
-	echo "recovery: 恢复备份"
+    echo "recovery: 恢复备份"
     echo "packaging: 打包备份"
     echo
-	;;
+    ;;
 esac
 
