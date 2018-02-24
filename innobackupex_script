@@ -27,7 +27,7 @@ SOCK_FILE='/data/db/mysql/var/mysql.sock'
 DATA_DIR='/data/db/mysql/var'
 BASE_DIR=${BAK_PATH}/${CURRENT_DATE}
 SCRIPT_DIR='/root/scripts'
-MANAGER_PASS='password'
+ADMIN_PASS='password'
 
 
 if [ "$UID" -ne 0 ];then
@@ -214,41 +214,41 @@ do_recovery(){
 
 do_replay_binlog(){
     read -p "输入时间[比如: 2018-02-23 17-10-10]: " recovery_day recovery_time
-    stop_time=$( echo ${recovery_time} | awk 'gsub("-", ":");print $1$2$3' )
+    stop_time=$(echo ${recovery_time} | awk '{gsub("-", ":");print $1$2$3}')
+    echo ${stop_time}
     sub_backup_dir=$(echo ${recovery_day} | awk -F '-' '{print $1$2$3}')
-    recovery_hour=$(echo ${recovery_time} | awk -F '-' '{print $1}')
-    ((next_backup_hour=${recovery_hour} + 1))
-    current_inc_string=${recovery_day}_${recovery_hour}*
-    next_inc_string=${recovery_day}_${next_backup_hour}*
+    hour=$(echo ${recovery_time} | awk -F '-' '{print $1}')
+    ((next_hour=${hour} + 1))
+    current_inc_string=${recovery_day}_${hour}*
+    next_inc_string=${recovery_day}_${next_hour}*
     current_inc_dir=$(find ${BAK_PATH}/${sub_backup_dir}/ -name "${current_inc_string}")
     next_inc_dir=$(find ${BAK_PATH}/${sub_backup_dir}/ -name "${next_inc_string}")
-    # echo ${current_inc_dir}
-    # echo ${next_inc_dir}
-    if test -f ${BAK_PATH}/${sub_backup_dir}/${current_inc_dir}/xtrabackup_binlog_info;then
-        begin_file=$(cat ${BAK_PATH}/${sub_backup_dir}/${current_inc_dir}/xtrabackup_binlog_info | awk '{print $1}')
-        begin_position=$(cat ${BAK_PATH}/${sub_backup_dir}/${current_inc_dir}/xtrabackup_binlog_info | awk '{print $2}')
+    echo ${current_inc_dir}
+    echo ${next_inc_dir}
+    if test -f ${current_inc_dir}/xtrabackup_binlog_info;then
+        begin_file=$(cat ${current_inc_dir}/xtrabackup_binlog_info | awk '{print $1}')
+        begin_position=$(cat ${current_inc_dir}/xtrabackup_binlog_info | awk '{print $2}')
     else
-        echo "not found binlog info file"
         exit 1
     fi
 
-    if test -f ${BAK_PATH}/${sub_backup_dir}/${next_inc_dir}/xtrabackup_binlog_info.qb;then
+    if test -f ${next_inc_dir}/xtrabackup_binlog_info.qp;then
         innobackupex \
         --decompress \
         --parallel=4 \
-        ${BAK_PATH}/${sub_backup_dir}/${next_inc_dir} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+        ${next_inc_dir} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
         find ${BAK_PATH}/${recovery_date}/${dir_name} -name "*.qp" -delete
     fi
 
-    if test -f ${BAK_PATH}/${sub_backup_dir}/${next_inc_dir}/xtrabackup_binlog_info;then
-        end_file=$(cat ${BAK_PATH}/${sub_backup_dir}/${next_inc_dir}/xtrabackup_binlog_info | awk '{print $1}')
+    if test -f ${next_inc_dir}/xtrabackup_binlog_info;then
+        end_file=$(cat ${next_inc_dir}/xtrabackup_binlog_info | awk '{print $1}')
     else
-        echo "cant found next inc binlog info file"
         exit 1
     fi
+
     mysqlbinlog ${begin_file} ${end_file} \
     --start-position=${begin_position}
-    --stop-datetime="${stop_time}" | mysql -u root -p${MANAGER_PASS}
+    --stop-datetime="${stop_time}" | mysql -u root -p${ADMIN_PASS}
 }
 
 case $1 in
