@@ -119,6 +119,11 @@ do_inc_backup(){
 
 do_write_list(){
     if [ -d ${BAK_PATH}/$1 ]; then
+        if test -f ${BAK_PATH}/$1/list.lock;then
+            echo "list.lock存在" >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+            exit 1
+        fi
+
         ls -tr1  ${BAK_PATH}/$1 > ${SCRIPT_DIR}/list.lock
     else
         exit 1
@@ -196,17 +201,32 @@ do_recovery(){
     do_merge_backup ${recovery_datetime} ${recovery_date}
     service mysqld stop
     dir_name=$(cat ${SCRIPT_DIR}/list.lock | awk 'NR==1{print}')
-    # 开始回滚所有未提交的事务
     innobackupex \
     --apply-log \
     ${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
-    # 开始恢复
+    if [ $? -eq 0 ];then
+        echo "开始回滚所有未提交的事务" > ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+    else
+        echo "开始回滚所有未提交的事务失败，请尝试手动执行命令:
+        innobackupex --apply-log ${BAK_PATH}/${recovery_date}/${dir_name}" \
+        >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+        exit 1
+    fi
+
+    if test -d ${DATA_DIR}; then
+        echo "${DATA_DIR}目录存在, 在回写时将失败，所以这里选退出了,请手动执行:
+        innobackupex --copy-back ${BAK_PATH}/${recovery_date}/${dir_name}
+        " >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+        exit 1
+    fi
+
     innobackupex \
     --copy-back \
     ${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
     if [ $? -eq 0 ];then
         chown -R mysql.mysql ${DATA_DIR}
         service mysqld start
+        rm -f ${SCRIPT_DIR}/list.lock
     else
         exit 1
     fi
@@ -215,16 +235,13 @@ do_recovery(){
 do_replay_binlog(){
     read -p "输入时间[比如: 2018-02-23 17-10-10]: " recovery_day recovery_time
     stop_time=$(echo ${recovery_time} | awk '{gsub("-", ":");print $1$2$3}')
-    echo ${stop_time}
     sub_backup_dir=$(echo ${recovery_day} | awk -F '-' '{print $1$2$3}')
     hour=$(echo ${recovery_time} | awk -F '-' '{print $1}')
     ((next_hour=${hour} + 1))
     current_inc_string=${recovery_day}_${hour}*
     next_inc_string=${recovery_day}_${next_hour}*
     current_inc_dir=$(find ${BAK_PATH}/${sub_backup_dir}/ -name "${current_inc_string}")
-    next_inc_dir=$(find ${BAK_PATH}/${sub_backup_dir}/ -name "${next_inc_string}")
-    echo ${current_inc_dir}
-    echo ${next_inc_dir}
+
     if test -f ${current_inc_dir}/xtrabackup_binlog_info;then
         begin_file=$(cat ${current_inc_dir}/xtrabackup_binlog_info | awk '{print $1}')
         begin_position=$(cat ${current_inc_dir}/xtrabackup_binlog_info | awk '{print $2}')
@@ -232,23 +249,26 @@ do_replay_binlog(){
         exit 1
     fi
 
-    if test -f ${next_inc_dir}/xtrabackup_binlog_info.qp;then
-        innobackupex \
-        --decompress \
-        --parallel=4 \
-        ${next_inc_dir} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
-        find ${BAK_PATH}/${recovery_date}/${dir_name} -name "*.qp" -delete
-    fi
-
-    if test -f ${next_inc_dir}/xtrabackup_binlog_info;then
+    next_inc_dir=$(find ${BAK_PATH}/${sub_backup_dir}/ -name "${next_inc_string}")
+    if [ -d ${next_inc_dir} ];then
+        if test -f ${next_inc_dir}/xtrabackup_binlog_info.qp;then
+            innobackupex \
+            --decompress \
+            --parallel=4 \
+            ${next_inc_dir} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+            find ${BAK_PATH}/${recovery_date}/${dir_name} -name "*.qp" -delete
+        fi
         end_file=$(cat ${next_inc_dir}/xtrabackup_binlog_info | awk '{print $1}')
-    else
-        exit 1
-    fi
 
-    mysqlbinlog ${begin_file} ${end_file} \
-    --start-position=${begin_position} \
-    --stop-datetime="${stop_time}" | mysql -u root -p${ADMIN_PASS}
+        mysqlbinlog ${begin_file} ${end_file} \
+        --start-position=${begin_position} \
+        --stop-datetime="${recovery_day} ${stop_time}" | mysql -u root -p${ADMIN_PASS}
+    else
+        end_file=${begin_file}
+        mysqlbinlog ${begin_file} \
+        --start-position=${begin_position} \
+        --stop-datetime="${recovery_day} ${stop_time}" | mysql -u root -p${ADMIN_PASS}
+    fi
 }
 
 case $1 in
