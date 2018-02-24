@@ -230,7 +230,6 @@ case $1 in
     *)
     echo "Usage: $0 <params: [full|inc|recovery|packaging]>"
     echo
-    echo "参数: full, inc, recovery, packaging"
     echo "full: 全量备份"
     echo "inc: 增量备份"
     echo "recovery: 恢复备份"
