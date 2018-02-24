@@ -1,0 +1,3 @@
+0 0 * * *  bash /root/scripts/innobackupex_backup_mysql.sh full  2>&1 >/dev/null
+30 0 * * *  bash /root/scripts/innobackupex_backup_mysql.sh packaging  2>&1 >/dev/null
+0 */1 * * * bash /root/scripts/innobackupex_backup_mysql.sh inc  2>&1 > /dev/null
