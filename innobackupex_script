@@ -149,7 +149,7 @@ do_merge_backup(){
                 # 定义全量备份目录变量
                 full_backup_dir=${BAK_PATH}/${recovery_date}/${dir_name}
             elif [ ${counter} -eq ${end_line_number} ];then
-            # 合并指定的最后一条记录，则不需要--redo-only参数
+            # 合并最后一个增量，不需要--redo-only参数
                 innobackupex \
                 --decompress \
                 --parallel=4 \
