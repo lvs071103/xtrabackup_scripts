@@ -177,7 +177,8 @@ do_merge_backup(){
                 --use-memory=4G \
                 --redo-only \
                 ${full_backup_dir} \
-                --incremental-dir=${BAK_PATH}/${recovery_date}/${dir_name} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+                --incremental-dir=${BAK_PATH}/${recovery_date}/${dir_name} \
+                >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
             fi
         done
     fi
@@ -207,16 +208,14 @@ do_recovery(){
     if [ $? -eq 0 ];then
         echo "开始回滚所有未提交的事务" > ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
     else
-        echo "开始回滚所有未提交的事务失败，请尝试手动执行命令:
-        innobackupex --apply-log ${BAK_PATH}/${recovery_date}/${dir_name}" \
-        >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+        echo -e "开始回滚所有未提交的事务失败，请尝试手动执行命令: \ninnobackupex
+        --apply-log ${BAK_PATH}/${recovery_date}/${dir_name}" >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
         exit 1
     fi
 
     if test -d ${DATA_DIR}; then
-        echo "${DATA_DIR}目录存在, 在回写时将失败，所以这里选退出了,请手动执行:
-        innobackupex --copy-back ${BAK_PATH}/${recovery_date}/${dir_name}
-        " >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
+        echo -e "${DATA_DIR}目录存在, 在回写时将失败，所以这里选退出了,请手动执行: \ninnobackupex
+        --copy-back ${BAK_PATH}/${recovery_date}/${dir_name}" >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
         exit 1
     fi
 
