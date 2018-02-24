@@ -228,7 +228,7 @@ case $1 in
     do_recovery
     ;;
     *)
-    echo "Usage: $0 <params: [full, incremental, zip]>"
+    echo "Usage: $0 <params: [full|inc|recovery|packaging]>"
     echo
     echo "参数: full, inc, recovery, packaging"
     echo "full: 全量备份"
