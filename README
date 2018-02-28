@@ -1,3 +1,29 @@
+运行：
+# ./innobackupex_backup_mysql.sh
+Usage: ./innobackupex_backup_mysql.sh <params: [full|inc|recovery|packaging]>
+
+full: 全量备份
+inc: 增量备份
+recovery: 恢复备份
+packaging: 打包备份
+
+
+
+
+备份计划任务例子：
+
 0 0 * * *  bash /root/scripts/innobackupex_backup_mysql.sh full  2>&1 >/dev/null
 30 0 * * *  bash /root/scripts/innobackupex_backup_mysql.sh packaging  2>&1 >/dev/null
 0 */1 * * * bash /root/scripts/innobackupex_backup_mysql.sh inc  2>&1 > /dev/null
+
+
+
+恢复至任意时间案例：
+# ./innobackupex_backup_mysql.sh recovery
+请准备好管理员密码，后面要用到，这里请输入时间[2018-02-23 17-10-10]: 2018-02-27 10-45-00
+Merge SUCC
+Redirecting to /bin/systemctl stop  mysqld.service
+Redirecting to /bin/systemctl start  mysqld.service
+Enter password: 
+recovery Success
+

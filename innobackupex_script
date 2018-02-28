@@ -282,6 +282,8 @@ do_recovery_main(){
     RECOVERY_M=$(echo ${RECOVERY_TIME} | awk -F'-' '{print $2}')
     # 这里需要注意一下，这里方便测试备份时间间隔精确至分钟，如果按时备份，或者按天备份，请在此处作相应修改, 比如按小时备份:
     # REGEX_STRING=${RECOVERY_DAY}_${RECOVERY_H}-[0-5][0-9]-[0-5][0-9]
+    # 按天
+    # REGEX_STRING=${RECOVERY_DAY}_[0-2][0-3]-[0-5][0-9]-[0-5][0-9]
     REGEX_STRING=${RECOVERY_DAY}_${RECOVERY_H}-${RECOVERY_M:0:1}[0-9]
     do_write_list ${SUB_BACKUP_DIR}
     RECOVERY_INC_DIR=$(cat ${SCRIPT_DIR}/list.lock | awk '/'${REGEX_STRING}'/ {print}')
