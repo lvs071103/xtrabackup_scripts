@@ -281,8 +281,11 @@ do_recovery_main(){
     SUB_BACKUP_DIR=$(echo ${RECOVERY_DAY} | awk -F '-' '{print $1$2$3}')
     RECOVERY_H=$(echo ${RECOVERY_TIME} | awk -F'-' '{print $1}')
     RECOVERY_M=$(echo ${RECOVERY_TIME} | awk -F'-' '{print $2}')
-    # 这里需要注意一下，这里方便测试备份时间间隔精确至分钟，如果增量按时备份，请在此处作相应修改, 比如按小时备份:
+    # 按天增量备份匹配字串符如下(注意按天增量备份时，所有逻辑作相应调整):
+    # REGEX_STRING=${RECOVERY_DAY:0:7}-[0-3][0-9]_[0-2][0-3]-[0-5][0-9]-[0-5][0-9]
+    # 按小时增量备份，匹配字串符如下:
     # REGEX_STRING=${RECOVERY_DAY}_${RECOVERY_H}-[0-5][0-9]-[0-5][0-9]
+    # 按分钟增量备份，匹配字串符如下:
     REGEX_STRING=${RECOVERY_DAY}_${RECOVERY_H}-${RECOVERY_M:0:1}[0-9]
     do_write_list ${SUB_BACKUP_DIR}
     RECOVERY_INC_DIR=$(cat ${SCRIPT_DIR}/list.lock | awk '/'${REGEX_STRING}'/ {print}')
