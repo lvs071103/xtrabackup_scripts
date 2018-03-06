@@ -320,7 +320,7 @@ do_packaging()
     LAST_DAY=$(perl -e 'use POSIX;print strftime "%Y%m%d",localtime time-86400;')
     if test -d ${BAK_PATH}/${LAST_DAY};then
         cd ${BAK_PATH}
-        tar czvf ${LAST_DAY}_full_and_inc.tar.gz
+        tar czvf ${LAST_DAY}_full_and_inc.tar.gz ${LAST_DAY}
         if [ $? -eq 0 ];then
             rm -rf ${BAK_PATH}/${LAST_DAY}
         fi
