@@ -115,7 +115,7 @@ do_inc_backup(){
         --user=${USER} \
         --password=${PASS} \
         -S ${SOCK_FILE} \
-        --use-memory=4G \
+        --use-memory=400M \
         --compress \
         --compress-threads=4 \
         --incremental-basedir=${BASE_DIR}/${LAST_BACKUP_DIR} \
@@ -165,7 +165,7 @@ do_merge_backup(){
                 innobackupex \
                 --apply-log \
                 --redo-only \
-                --use-memory=4G \
+                --use-memory=400M \
                 ${BAK_PATH}/${SUB_BACKUP_DIR}/${DIR_NAME} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
                 # 定义全量备份目录变量
                 FULL_BACKUP_DIR=${BAK_PATH}/${SUB_BACKUP_DIR}/${DIR_NAME}
@@ -178,7 +178,7 @@ do_merge_backup(){
                 find ${BAK_PATH}/${SUB_BACKUP_DIR}/${DIR_NAME} -name "*.qp" -delete
                 innobackupex \
                 --apply-log \
-                --use-memory=4G \
+                --use-memory=400M \
                 ${FULL_BACKUP_DIR} \
                 --incremental-dir=${BAK_PATH}/${SUB_BACKUP_DIR}/${DIR_NAME} >> ${LOG_DIR}/recovery_info_${CURRENT_DATE}.log 2>&1
             else
@@ -190,7 +190,7 @@ do_merge_backup(){
                 find ${BAK_PATH}/${SUB_BACKUP_DIR}/${DIR_NAME} -name "*.qp" -delete
                 innobackupex \
                 --apply-log \
-                --use-memory=4G \
+                --use-memory=400M \
                 --redo-only \
                 ${FULL_BACKUP_DIR} \
                 --incremental-dir=${BAK_PATH}/${SUB_BACKUP_DIR}/${DIR_NAME} \
