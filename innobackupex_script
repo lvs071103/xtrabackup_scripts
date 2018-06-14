@@ -30,6 +30,7 @@ BASE_DIR=${BAK_PATH}/${CURRENT_DATE}
 SCRIPT_DIR='/root/scripts'
 BINLOG_DIR='/data/db/mysql_binlog'
 # BINLOG_BIN='/usr/local/lnmp/mysql/bin/mysqlbinlog'
+HOSTNAME='localhost'
 
 
 if [ "$UID" -ne 0 ];then
@@ -49,6 +50,21 @@ do_install(){
     yum install qpress -y
 }
 
+do_full_backup_compress() {
+    innobackupex --user=root \
+    --password=${PASS} \
+    --use-memory=400M \
+    --defaults-file=/etc/my.cnf  \
+    -S ${SOCK_FILE} \
+    --stream=tar ./ | gzip -> ${BAK_PATH}/${HOSTNAME}_${CURRENT_DATE}_all.tar.gz >> ${LOG_DIR}/${LOG_FILE} 2>&1
+    if [ $? -eq 0 ]; then
+        echo "full backup OK."
+    else
+        echo "full backup FAIL."
+        exit 1
+    fi
+
+}
 
 do_full_backup() {
     if [ ! -d ${BASE_DIR} ];then
@@ -58,7 +74,7 @@ do_full_backup() {
     --defaults-file=${CONF_FILE} \
     --user=${USER} \
     --password=${PASS} \
-    --use-memory=4G \
+    --use-memory=400M \
     --compress \
     --compress-threads=4 \
     -S ${SOCK_FILE} \
@@ -346,6 +362,9 @@ case $1 in
     ;;
     recovery)
     do_recovery_main
+    ;;
+    full_back_with_compress)
+    do_full_backup_compress
     ;;
     *)
     echo "Usage: $0 <params: [full|inc|recovery|packaging]>"
