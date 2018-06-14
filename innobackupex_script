@@ -52,7 +52,11 @@ do_install(){
 }
 
 do_full_backup_compress() {
-    innobackupex --defaults-file=${CONF_FILE} --user=${USER} --password=${PASS} -S ${SOCK_FILE} --stream=tar ./ | gzip -> ${BAK_PATH}/${HOSTNAME}_${CURRENT_DATE}_all.tar.gz >> ${LOG_DIR}/${LOG_FILE} 2>&1
+    innobackupex \
+    --defaults-file=${CONF_FILE} \
+    --user=${USER} \
+    --password=${PASS} \
+    --stream=tar ./ | gzip -> ${BAK_PATH}/${HOSTNAME}_${CURRENT_DATE}_all.tar.gz
     if [ $? -eq 0 ]; then
         echo "full backup OK."
     else
