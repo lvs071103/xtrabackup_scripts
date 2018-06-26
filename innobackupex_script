@@ -21,8 +21,8 @@ BAK_PATH=/data/database_backup
 CURRENT_DATE=$(date +%Y%m%d)
 LOG_FILE="mysql_back_info_${CURRENT_DATE}.log"
 LOG_DIR='/var/log/mysql_back'
-USER='bkpuser'
-PASS='OLidp2L5fOW2I1sm'
+USER='root'
+PASS='sFDRJ85qqeOp72nU'
 CONF_FILE='/etc/my.cnf'
 SOCK_FILE='/data/db/mysql/var/mysql.sock'
 DATA_DIR='/data/db/mysql/var'
@@ -44,6 +44,10 @@ else
     :
 fi
 
+if [ ! -d ${BAK_PATH} ];then
+    mkdir -p ${BAK_PATH}
+fi
+
 do_install(){
     yum install http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm -y
     yum install percona-xtrabackup-24 -y
@@ -51,7 +55,7 @@ do_install(){
     yum install gzip -y
 }
 
-do_full_backup_compress() {
+do_stream_backup() {
     innobackupex \
     --defaults-file=${CONF_FILE} \
     --user=${USER} \
@@ -363,8 +367,8 @@ case $1 in
     recovery)
     do_recovery_main
     ;;
-    full_back_with_compress)
-    do_full_backup_compress
+    do_stream_backup)
+    do_stream_backup
     ;;
     *)
     echo "Usage: $0 <params: [full|inc|recovery|packaging]>"
