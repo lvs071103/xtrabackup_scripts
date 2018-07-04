@@ -22,7 +22,7 @@ CURRENT_DATE=$(date +%Y%m%d)
 LOG_FILE="mysql_back_info_${CURRENT_DATE}.log"
 LOG_DIR='/var/log/mysql_back'
 USER='root'
-PASS='sFDRJ85qqeOp72nU'
+PASS='123456'
 CONF_FILE='/etc/my.cnf'
 SOCK_FILE='/data/db/mysql/var/mysql.sock'
 DATA_DIR='/data/db/mysql/var'
@@ -60,6 +60,7 @@ do_stream_backup() {
     --defaults-file=${CONF_FILE} \
     --user=${USER} \
     --password=${PASS} \
+    -S ${SOCK_FILE} \
     --stream=tar ./ | gzip -> ${BAK_PATH}/${HOSTNAME}_${CURRENT_DATE}_all.tar.gz
     if [ $? -eq 0 ]; then
         echo "full backup OK."
